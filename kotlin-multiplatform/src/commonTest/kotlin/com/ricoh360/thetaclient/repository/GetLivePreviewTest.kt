@@ -64,7 +64,7 @@ class GetLivePreviewTest {
             runBlocking {
                 try {
                     thetaRepository.getLivePreview().collect { byteReadPacket ->
-                        byteReadPacket.release()
+                        byteReadPacket.close()
                         if (counter <= 0) {
                             cancel()
                         }
@@ -109,7 +109,7 @@ class GetLivePreviewTest {
 
         val thetaRepository = ThetaRepository(endpoint)
         thetaRepository.getLivePreview().collect { byteReadPacket ->
-            byteReadPacket.release()
+            byteReadPacket.close()
             counter--
         }
         assertTrue(counter <= 0, "call getLivePreview")
@@ -148,7 +148,7 @@ class GetLivePreviewTest {
         try {
             val flow = thetaRepository.getLivePreview()
             flow.collect { byteReadPacket ->
-                byteReadPacket.release()
+                byteReadPacket.close()
             }
             assertTrue(false, "call getLivePreview")
         } catch (e: ThetaRepository.ThetaWebApiException) {

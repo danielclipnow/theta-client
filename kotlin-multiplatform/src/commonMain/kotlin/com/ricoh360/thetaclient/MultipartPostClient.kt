@@ -16,18 +16,21 @@ import io.ktor.network.sockets.openWriteChannel
 import io.ktor.network.sockets.tcpNoDelay
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.InternalAPI
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.charsets.Charsets
 import io.ktor.utils.io.close
 import io.ktor.utils.io.core.String
 import io.ktor.utils.io.core.toByteArray
+import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.io.Source
+import kotlinx.io.buffered
 import kotlinx.io.files.Path
-import kotlinx.io.files.source
+import kotlinx.io.files.SystemFileSystem
 
 /**
  * Base class of custom HTTP client
@@ -268,6 +271,7 @@ open class BaseHttpClient {
     /**
      * fill read buffer from endpoint
      */
+    @OptIn(InternalAPI::class)
     private suspend fun fillBuffer(): Int {
         pos = 0
         curr = input!!.readAvailable(receiveBuffer, 0, receiveBuffer.size)
@@ -646,7 +650,7 @@ class MultipartPostClientImpl : MultipartPostClient, BaseHttpClient() {
             var size = 0L
             var src: Source? = null
             try {
-                src = Path(filePath).source()
+                src = SystemFileSystem.source(Path(filePath)).buffered()
                 var count = 0
                 while (count != -1) {
                     size += count
@@ -747,7 +751,7 @@ class MultipartPostClientImpl : MultipartPostClient, BaseHttpClient() {
         filePaths.forEach {
             var src: Source? = null
             try {
-                src = Path(it).source()
+                src = SystemFileSystem.source(Path(it)).buffered()
                 writePartHeaders(boundary, genPartHeaders(getFileName(it)))
                 // write part body
                 var count = 0

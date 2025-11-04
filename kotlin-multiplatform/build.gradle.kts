@@ -4,9 +4,9 @@ import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version "1.9.20"
+    kotlin("plugin.serialization") version "2.2.20"
     id("com.android.library")
-    id("org.jetbrains.dokka") version "1.9.20"
+    id("org.jetbrains.dokka") version "2.0.0"
     kotlin("native.cocoapods")
     signing
     id("io.gitlab.arturbosch.detekt").version("1.23.3")
@@ -14,7 +14,7 @@ plugins {
 }
 
 dependencies {
-    dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.9.20")
+    dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
 }
 
 val thetaClientVersion = "1.13.1"
@@ -22,10 +22,12 @@ group = "com.ricoh360.thetaclient"
 version = thetaClientVersion
 
 kotlin {
+    jvmToolchain(17)
+
     androidTarget {
         compilations.all {
-            kotlinOptions {
-                jvmTarget = "1.8"
+            compilerOptions.configure {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
             }
         }
         publishLibraryVariants("release")
@@ -46,13 +48,15 @@ kotlin {
         }
     }
 
+    jvm()
+
     iosX64()
     iosArm64()
     iosSimulatorArm64()
 
     sourceSets {
-        val coroutinesVersion = "1.7.3"
-        val ktorVersion = "2.3.13"
+        val coroutinesVersion = "1.10.2"
+        val ktorVersion = "3.3.1"
         val kryptoVersion = "4.0.10"
 
         val commonMain by getting {
@@ -102,10 +106,10 @@ kotlin {
 
 android {
     namespace = "com.ricoh360.thetaclient"
-    compileSdk = 34
+    compileSdk = 35
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdk = 26
+        minSdk = 28
         setProperty("archivesBaseName", "theta-client")
         consumerProguardFiles("proguard-rules.pro")
     }
@@ -165,7 +169,7 @@ detekt {
     allRules = false // activate all available (even unstable) rules.
     config.setFrom("$rootDir/config/detekt.yml") // config file
     baseline = file("$rootDir/config/baseline.xml")
-    source = files(
+    source.setFrom(
         "$rootDir/kotlin-multiplatform/src/commonMain/",
         "$rootDir/flutter/android/src/",
         "$rootDir/react-native/android/src/"

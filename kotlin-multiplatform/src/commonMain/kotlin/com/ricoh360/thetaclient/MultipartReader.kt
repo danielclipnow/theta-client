@@ -6,7 +6,10 @@ package com.ricoh360.thetaclient
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.core.ByteReadPacket
+import io.ktor.utils.io.InternalAPI
+import io.ktor.utils.io.readPacket
+import io.ktor.utils.io.readUTF8LineTo
+import kotlinx.io.Source
 
 /**
  * Reader for HTTP multipart response body Theta sends.
@@ -35,7 +38,8 @@ internal class MultipartReader(headers: Headers, val readChannel: ByteReadChanne
      * get next part
      * if next part doesn't found, returns null
      */
-    suspend fun nextPart(): ByteReadPacket? {
+    @OptIn(InternalAPI::class)
+    suspend fun nextPart(): Source? {
         if (boundary == null) return null
         var line: String?
 
@@ -61,7 +65,7 @@ internal class MultipartReader(headers: Headers, val readChannel: ByteReadChanne
         }
 
         // read the part body
-        kotlin.runCatching {
+        kotlin.runCatching<Source> {
             readChannel.readPacket(contentLength)
         }.onSuccess {
             return it
@@ -78,6 +82,7 @@ internal class MultipartReader(headers: Headers, val readChannel: ByteReadChanne
      * @param size Size of [buffer]
      * @return Read string.  On error, null is returned.
      */
+    @OptIn(InternalAPI::class)
     private suspend inline fun readTextLine(buffer: StringBuilder, size: Int): String? {
         buffer.clear()
         kotlin.runCatching {

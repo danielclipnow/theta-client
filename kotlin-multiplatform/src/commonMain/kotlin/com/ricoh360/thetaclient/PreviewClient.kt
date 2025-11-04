@@ -19,12 +19,14 @@ import io.ktor.network.sockets.tcpNoDelay
 import io.ktor.network.tls.tls
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.InternalAPI
 import io.ktor.utils.io.cancel
 import io.ktor.utils.io.charsets.Charsets
 import io.ktor.utils.io.close
 import io.ktor.utils.io.core.String
 import io.ktor.utils.io.core.toByteArray
 import io.ktor.utils.io.discard
+import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -266,6 +268,7 @@ internal class PreviewClientImpl : PreviewClient {
     /**
      * fill buffer from endpoint
      */
+    @OptIn(InternalAPI::class)
     private suspend fun fillBuffer(): Int {
         pos = 0
         try {
