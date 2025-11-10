@@ -4,7 +4,7 @@ import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version "2.2.20"
+    kotlin("plugin.serialization") version "2.2.21"
     id("com.android.library")
     id("org.jetbrains.dokka") version "2.0.0"
     kotlin("native.cocoapods")
