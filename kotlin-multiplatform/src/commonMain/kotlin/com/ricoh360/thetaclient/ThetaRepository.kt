@@ -460,6 +460,134 @@ class ThetaRepository internal constructor(val endpoint: String, config: Config?
     }
 
     /**
+     * Take a picture directly without using PhotoCapture.Builder.
+     * This method does not reconfigure captureMode, making it safe to use
+     * after setting HDR filter or other options that lock captureMode.
+     *
+     * @param checkStatusCommandInterval Interval in milliseconds to poll for capture completion
+     * @return URL of the captured image file, or null if capture was cancelled
+     * @exception ThetaWebApiException If an error occurs in THETA.
+     * @exception NotConnectedException If not connected to THETA.
+     */
+    @Throws(Throwable::class)
+    suspend fun takePicture(checkStatusCommandInterval: Long = CHECK_COMMAND_STATUS_INTERVAL): String? {
+        try {
+            var response = ThetaApi.callTakePictureCommand(endpoint)
+
+            response.error?.let { error ->
+                if (!error.isCanceledShootingCode()) {
+                    throw ThetaWebApiException(error.message)
+                }
+                return null
+            }
+
+            val commandId = response.id
+
+            while (response.state == CommandState.IN_PROGRESS) {
+                delay(checkStatusCommandInterval)
+                response = ThetaApi.callStatusApi(
+                    endpoint = endpoint,
+                    params = StatusApiParams(id = commandId)
+                ) as TakePictureResponse
+            }
+
+            if (response.state == CommandState.DONE) {
+                return response.results?.fileUrl
+            }
+
+            response.error?.let { error ->
+                if (!error.isCanceledShootingCode()) {
+                    throw ThetaWebApiException(error.message)
+                }
+            }
+            return null
+        } catch (e: JsonConvertException) {
+            throw ThetaWebApiException(e.message ?: e.toString())
+        } catch (e: ResponseException) {
+            if (isCanceledShootingResponse(e.response)) {
+                return null
+            }
+            throw ThetaWebApiException.create(e)
+        } catch (e: ThetaWebApiException) {
+            throw e
+        } catch (e: Exception) {
+            throw NotConnectedException(e.message ?: e.toString())
+        }
+    }
+
+    /**
+     * Start a time-shift capture directly without using TimeShiftCapture.Builder.
+     * This method does not reconfigure captureMode, making it safe to use
+     * after setting HDR filter or other options that lock captureMode.
+     *
+     * @param checkStatusCommandInterval Interval in milliseconds to poll for capture completion
+     * @param onProgress Optional callback for progress updates (0.0 to 1.0)
+     * @return URL of the captured image file, or null if capture was cancelled
+     * @exception ThetaWebApiException If an error occurs in THETA.
+     * @exception NotConnectedException If not connected to THETA.
+     */
+    @Throws(Throwable::class)
+    suspend fun startTimeShiftCapture(
+        checkStatusCommandInterval: Long = CHECK_COMMAND_STATUS_INTERVAL,
+        onProgress: ((Float) -> Unit)? = null
+    ): String? {
+        try {
+            var response: CommandApiResponse = ThetaApi.callStartCaptureCommand(
+                endpoint = endpoint,
+                params = StartCaptureParams(_mode = ShootingMode.TIME_SHIFT_SHOOTING)
+            )
+
+            response.error?.let { error ->
+                if (!error.isCanceledShootingCode()) {
+                    throw ThetaWebApiException(error.message)
+                }
+                return null
+            }
+
+            val commandId = response.id
+
+            while (response.state == CommandState.IN_PROGRESS) {
+                delay(checkStatusCommandInterval)
+                response = ThetaApi.callStatusApi(
+                    endpoint = endpoint,
+                    params = StatusApiParams(id = commandId)
+                )
+                onProgress?.invoke(response.progress?.completion ?: 0f)
+            }
+
+            if (response.state == CommandState.DONE) {
+                return when (response.name) {
+                    "camera.startCapture" -> {
+                        val captureResponse = response as StartCaptureResponse
+                        captureResponse.results?.fileUrls?.firstOrNull()
+                            ?: captureResponse.results?.fileUrl
+                    }
+                    "camera.takePicture" -> (response as TakePictureResponse).results?.fileUrl
+                    else -> null
+                }
+            }
+
+            response.error?.let { error ->
+                if (!error.isCanceledShootingCode()) {
+                    throw ThetaWebApiException(error.message)
+                }
+            }
+            return null
+        } catch (e: JsonConvertException) {
+            throw ThetaWebApiException(e.message ?: e.toString())
+        } catch (e: ResponseException) {
+            if (isCanceledShootingResponse(e.response)) {
+                return null
+            }
+            throw ThetaWebApiException.create(e)
+        } catch (e: ThetaWebApiException) {
+            throw e
+        } catch (e: Exception) {
+            throw NotConnectedException(e.message ?: e.toString())
+        }
+    }
+
+    /**
      * Update the firmware of Theta using non-public API.
      * In case of Theta SC2, power off and on by hand is needed after this command finishes.
      * If target Theta is in insufficient charge, Theta may disconnect the socket.
