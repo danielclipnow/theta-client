@@ -51,6 +51,8 @@ The following artifacts are published:
 | `theta-client-iosarm64` | iOS ARM64 klib |
 | `theta-client-iossimulatorarm64` | iOS Simulator ARM64 klib |
 
+Browse all published artifacts at: https://github.com/danielclipnow/theta-client/packages
+
 
 
 ## Versioning
