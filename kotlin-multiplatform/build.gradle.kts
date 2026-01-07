@@ -10,8 +10,8 @@ if (localPropertiesFile.exists()) {
 }
 
 // Set Gradle project properties for GitHub Packages credentials
-val ghUsername = localProperties.getProperty("githubPackagesUsername")
-val ghPassword = localProperties.getProperty("githubPackagesPassword")
+val ghUsername = localProperties.getProperty("gpr.user")
+val ghPassword = localProperties.getProperty("gpr.key")
 if (ghUsername != null && ghPassword != null) {
     extra.set("GitHubPackagesUsername", ghUsername)
     extra.set("GitHubPackagesPassword", ghPassword)
