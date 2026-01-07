@@ -63,10 +63,24 @@ val thetaClientVersion = "1.13.4"
 
 Update this value before publishing a new version.
 
+## Common Errors
+
 ### Authentication errors
 
 - **Local**: Verify `local.properties` has correct username and PAT
 - **CI/CD**: The `GITHUB_TOKEN` is automatically provided; no configuration needed
+
+### 409 Conflict
+
+If the publish action fails with a **409 Conflict** error, it means an artifact with the same version already exists in GitHub Packages.
+
+**Solution**: Increment the version number in `kotlin-multiplatform/build.gradle.kts`:
+
+```kotlin
+val thetaClientVersion = "1.13.5"  // bump the version
+```
+
+GitHub Packages does not allow overwriting existing versions. You must publish a new version.
 
 ## Using the Published SDK
 
