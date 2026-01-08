@@ -8,10 +8,9 @@ jdk:
 # Pre-install steps
 before_install:
   - chmod +x gradlew
-  # Accept Android SDK licenses
-  - yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
 # Custom install command - publish to local Maven for JitPack to pick up
 # We only build Android and JVM targets (iOS requires macOS)
+# Skip all tests with -x test (covers jvmTest, androidUnitTest, etc.)
 install:
-  - ./gradlew :kotlin-multiplatform:publishAndroidReleasePublicationToMavenLocal :kotlin-multiplatform:publishJvmPublicationToMavenLocal :kotlin-multiplatform:publishKotlinMultiplatformPublicationToMavenLocal -x test -x iosTest --no-daemon --stacktrace
+  - ./gradlew :kotlin-multiplatform:publishAndroidReleasePublicationToMavenLocal :kotlin-multiplatform:publishJvmPublicationToMavenLocal :kotlin-multiplatform:publishKotlinMultiplatformPublicationToMavenLocal -x test -x jvmTest -x androidUnitTest -x androidUnitTestRelease -x androidUnitTestDebug --no-daemon --stacktrace
