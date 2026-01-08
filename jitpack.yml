@@ -1,0 +1,17 @@
+# JitPack configuration for Kotlin Multiplatform project
+# JitPack runs on Linux, so only Android and JVM targets are built
+# iOS targets require macOS and are not available via JitPack
+
+jdk:
+  - openjdk17
+
+# Pre-install steps
+before_install:
+  - chmod +x gradlew
+  # Accept Android SDK licenses
+  - yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+# Custom install command - publish to local Maven for JitPack to pick up
+# We only build Android and JVM targets (iOS requires macOS)
+install:
+  - ./gradlew :kotlin-multiplatform:publishAndroidReleasePublicationToMavenLocal :kotlin-multiplatform:publishJvmPublicationToMavenLocal :kotlin-multiplatform:publishKotlinMultiplatformPublicationToMavenLocal -x test -x iosTest --no-daemon --stacktrace

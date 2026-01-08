@@ -2,6 +2,9 @@ import org.jetbrains.dokka.versioning.VersioningConfiguration
 import org.jetbrains.dokka.versioning.VersioningPlugin
 import java.util.Properties
 
+// Detect if building on JitPack
+val isJitPackBuild = System.getenv("JITPACK") == "true"
+
 // Load credentials from local.properties if available
 val localPropertiesFile = rootProject.file("local.properties")
 val localProperties = Properties()
@@ -31,7 +34,7 @@ dependencies {
     dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
 }
 
-val thetaClientVersion = "1.13.5"
+val thetaClientVersion = "1.13.6"
 group = "com.ricoh360.thetaclient"
 version = thetaClientVersion
 
@@ -197,4 +200,17 @@ tasks.matching { task ->
     task.name.contains("iosX64Test")
 }.configureEach {
     enabled = false
+}
+
+// JitPack: Disable all iOS-related tasks (JitPack runs on Linux, iOS requires macOS)
+if (isJitPackBuild) {
+    tasks.matching { task ->
+        task.name.contains("ios", ignoreCase = true) ||
+        task.name.contains("Ios") ||
+        task.name.contains("cocoapods", ignoreCase = true) ||
+        task.name.contains("Cocoapods") ||
+        task.name.contains("pod", ignoreCase = true)
+    }.configureEach {
+        enabled = false
+    }
 }

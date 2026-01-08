@@ -1,0 +1,117 @@
+name: Release to JitPack
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.13.5). Leave empty to use version from build.gradle.kts'
+        required: false
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from build.gradle.kts
+        id: get_version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(grep 'val thetaClientVersion' kotlin-multiplatform/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.get_version.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.get_version.outputs.VERSION }} already exists"
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tag
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.get_version.outputs.VERSION }}" -m "Release v${{ steps.get_version.outputs.VERSION }}"
+          git push origin "v${{ steps.get_version.outputs.VERSION }}"
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          prerelease: ${{ inputs.prerelease }}
+          body: |
+            ## Release v${{ steps.get_version.outputs.VERSION }}
+
+            ### JitPack Usage
+
+            Add JitPack repository to your project:
+
+            ```kotlin
+            // settings.gradle.kts
+            dependencyResolutionManagement {
+                repositories {
+                    maven { url = uri("https://jitpack.io") }
+                }
+            }
+            ```
+
+            Add the dependency:
+
+            ```kotlin
+            // build.gradle.kts
+            dependencies {
+                // For Android
+                implementation("com.github.danielclipnow.theta-client:kotlin-multiplatform-android:v${{ steps.get_version.outputs.VERSION }}")
+
+                // For JVM
+                implementation("com.github.danielclipnow.theta-client:kotlin-multiplatform-jvm:v${{ steps.get_version.outputs.VERSION }}")
+
+                // For Kotlin Multiplatform (common)
+                implementation("com.github.danielclipnow.theta-client:kotlin-multiplatform:v${{ steps.get_version.outputs.VERSION }}")
+            }
+            ```
+
+            ### Build Status
+
+            Check JitPack build status: https://jitpack.io/#danielclipnow/theta-client/v${{ steps.get_version.outputs.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger JitPack build
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+        run: |
+          echo "Triggering JitPack build for v${{ steps.get_version.outputs.VERSION }}"
+          # JitPack builds on first request, this just pre-warms the cache
+          curl -s "https://jitpack.io/api/builds/com.github.danielclipnow/theta-client/v${{ steps.get_version.outputs.VERSION }}" || true
+          echo ""
+          echo "JitPack build triggered. Check status at:"
+          echo "https://jitpack.io/#danielclipnow/theta-client/v${{ steps.get_version.outputs.VERSION }}"
+
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag existed:** ${{ steps.check_tag.outputs.TAG_EXISTS }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **JitPack URL:** https://jitpack.io/#danielclipnow/theta-client/v${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
