@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      use_current_branch:
+        description: 'Create tag from current branch (instead of main)'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
