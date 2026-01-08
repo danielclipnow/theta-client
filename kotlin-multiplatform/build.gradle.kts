@@ -34,7 +34,7 @@ dependencies {
     dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
 }
 
-val thetaClientVersion = "1.13.7"
+val thetaClientVersion = "1.13.8"
 group = "com.ricoh360.thetaclient"
 version = thetaClientVersion
 
@@ -50,26 +50,29 @@ kotlin {
         publishLibraryVariants("release")
     }
 
-    cocoapods {
-        summary = "THETA Client"
-        homepage = "https://github.com/ricohapi/theta-client"
-        name = "THETAClient"
-        authors = "Ricoh Co, Ltd."
-        version = thetaClientVersion
-        source = "{ :http => 'https://github.com/ricohapi/theta-client/releases/download/${thetaClientVersion}/THETAClient.xcframework.zip' }"
-        license = "MIT"
-        ios.deploymentTarget = "14.0"
-        framework {
-            baseName = "THETAClient"
-            isStatic = false
+    // Only configure iOS targets when NOT on JitPack (JitPack runs on Linux, iOS requires macOS)
+    if (!isJitPackBuild) {
+        cocoapods {
+            summary = "THETA Client"
+            homepage = "https://github.com/ricohapi/theta-client"
+            name = "THETAClient"
+            authors = "Ricoh Co, Ltd."
+            version = thetaClientVersion
+            source = "{ :http => 'https://github.com/ricohapi/theta-client/releases/download/${thetaClientVersion}/THETAClient.xcframework.zip' }"
+            license = "MIT"
+            ios.deploymentTarget = "14.0"
+            framework {
+                baseName = "THETAClient"
+                isStatic = false
+            }
         }
+
+        iosX64()
+        iosArm64()
+        iosSimulatorArm64()
     }
 
     jvm()
-
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
 
     sourceSets {
         val coroutinesVersion = "1.10.2"
@@ -100,26 +103,22 @@ kotlin {
         }
         val androidMain by getting
         val androidUnitTest by getting
-        val iosX64Main by getting
-        val iosArm64Main by getting
-        val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
+
+        // Only configure iOS source sets when NOT on JitPack
+        if (!isJitPackBuild) {
+            val iosX64Main by getting
+            val iosArm64Main by getting
+            val iosSimulatorArm64Main by getting
+            val iosMain by creating {
+                dependsOn(commonMain)
+                iosX64Main.dependsOn(this)
+                iosArm64Main.dependsOn(this)
+                iosSimulatorArm64Main.dependsOn(this)
+            }
+            val iosX64Test by getting
+            val iosArm64Test by getting
+            val iosSimulatorArm64Test by getting
         }
-        val iosX64Test by getting
-        val iosArm64Test by getting
-        val iosSimulatorArm64Test by getting
-        // Commented out iosTest source set to prevent IDE sync issues
-        // since iOS tests are disabled anyway (see line 204-212)
-        // val iosTest by creating {
-        //     dependsOn(commonTest)
-        //     iosX64Test.dependsOn(this)
-        //     iosArm64Test.dependsOn(this)
-        //     iosSimulatorArm64Test.dependsOn(this)
-        // }
     }
 }
 
@@ -192,24 +191,13 @@ tasks.dokkaHtml.configure {
     }
 }
 
-// Disable all iOS test tasks to prevent test failures in CI/CD
-tasks.matching { task ->
-    task.name.contains("iosTest", ignoreCase = true) ||
-    task.name.contains("iosSimulatorArm64Test") ||
-    task.name.contains("iosArm64Test") ||
-    task.name.contains("iosX64Test")
-}.configureEach {
-    enabled = false
-}
-
-// JitPack: Disable all iOS-related tasks (JitPack runs on Linux, iOS requires macOS)
-if (isJitPackBuild) {
+// Disable all iOS test tasks to prevent test failures in CI/CD (only when iOS targets exist)
+if (!isJitPackBuild) {
     tasks.matching { task ->
-        task.name.contains("ios", ignoreCase = true) ||
-        task.name.contains("Ios") ||
-        task.name.contains("cocoapods", ignoreCase = true) ||
-        task.name.contains("Cocoapods") ||
-        task.name.contains("pod", ignoreCase = true)
+        task.name.contains("iosTest", ignoreCase = true) ||
+        task.name.contains("iosSimulatorArm64Test") ||
+        task.name.contains("iosArm64Test") ||
+        task.name.contains("iosX64Test")
     }.configureEach {
         enabled = false
     }
