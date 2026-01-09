@@ -4,7 +4,7 @@ This guide explains how to publish the THETA Client SDK for Kotlin Multiplatform
 
 ### Publish to GitHub Packages
 
-#### Local Publishing
+#### Local Publishing (This is just if you want to test locally, ignore otherwise)
 
 1. Create a `local.properties` file in the project root (this file is gitignored):
 
@@ -90,18 +90,23 @@ GitHub Packages does not allow overwriting existing versions. You must publish a
 
 Add the GitHub Packages repository to your project:
 
-```kotlin
+settings.gradle:
+```kotlin 
 repositories {
     maven {
+        name = "GitHubPackages"
         url = uri("https://maven.pkg.github.com/danielclipnow/theta-client")
         credentials {
-            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
-            password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+            username = System.getenv("GITHUB_ACTOR") ?: "GITHUB_USERNAME"
+            password = System.getenv("GITHUB_TOKEN") ?: "GITHUB_READ_ONLY_TOKEN"
         }
     }
 }
-
-dependencies {
-    implementation("com.ricoh360.thetaclient:theta-client:1.13.4")
-}
 ```
+
+libs.version.toml
+```toml 
+theta-client = { module = "com.ricoh360.thetaclient:kotlin-multiplatform", version.ref = "theta-client" }
+```
+
+
