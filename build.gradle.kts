@@ -7,6 +7,10 @@ plugins {
 }
 
 buildscript {
+    repositories {
+        mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/dokka/dev")
+    }
     dependencies {
         classpath("org.jetbrains.dokka:versioning-plugin:2.0.0")
     }

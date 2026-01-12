@@ -80,3 +80,5 @@ Using this verification tool, you can select and send a command with its paramet
 
 ## Useful guides
 * [THETA SDK docs | help](https://theta360developers.github.io/sdk/)
+
+For building and publishing the SDK, see [Building and Publishing Guide](docs/tutorial-docusketch-build.md).

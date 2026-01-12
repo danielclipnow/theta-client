@@ -1,6 +1,5 @@
 import org.jetbrains.dokka.versioning.VersioningConfiguration
 import org.jetbrains.dokka.versioning.VersioningPlugin
-import com.vanniktech.maven.publish.SonatypeHost
 import java.util.Properties
 
 // Load credentials from local.properties if available
@@ -10,12 +9,12 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
-// Set properties for GitHub Packages credentials if found in local.properties
-localProperties.getProperty("githubPackagesUsername")?.let {
-    extra["gitHubPackagesUsername"] = it
-}
-localProperties.getProperty("githubPackagesPassword")?.let {
-    extra["gitHubPackagesPassword"] = it
+// Set Gradle project properties for GitHub Packages credentials
+val ghUsername = localProperties.getProperty("gpr.user")
+val ghPassword = localProperties.getProperty("gpr.key")
+if (ghUsername != null && ghPassword != null) {
+    extra.set("GitHubPackagesUsername", ghUsername)
+    extra.set("GitHubPackagesPassword", ghPassword)
 }
 
 plugins {
@@ -24,16 +23,15 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.dokka") version "2.0.0"
     kotlin("native.cocoapods")
-    signing
     id("io.gitlab.arturbosch.detekt").version("1.23.3")
-    id("com.vanniktech.maven.publish") version "0.32.0"
+    `maven-publish`
 }
 
 dependencies {
     dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
 }
 
-val thetaClientVersion = "1.13.1"
+val thetaClientVersion = "1.13.11"
 group = "com.ricoh360.thetaclient"
 version = thetaClientVersion
 
@@ -133,63 +131,22 @@ android {
     }
 }
 
-val javadocJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-}
-
-// Publish the library to Mavan repository.
-// Because the components are created only during the afterEvaluate phase, you must
-// configure your publications using the afterEvaluate() lifecycle method.
-afterEvaluate {
-    mavenPublishing {
-        // publishing to https://central.sonatype.com/
-        publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
-        signAllPublications()
-        coordinates(group.toString(), "theta-client", version.toString())
-        pom {
-            name.set("theta-client")
-            description.set("This library provides a way to control RICOH THETA using RICOH THETA API v2.1")
-            inceptionYear.set("2023")
-            url.set("https://github.com/ricohapi/theta-client")
-            licenses {
-                license {
-                    name.set("MIT")
-                    url.set("https://github.com/ricohapi/theta-client/blob/main/LICENSE")
-                }
-            }
-            developers {
-                developer {
-                    organization.set("RICOH360")
-                    organizationUrl.set("https://github.com/ricohapi/theta-client")
-                }
-            }
-            scm {
-                connection.set("scm:git:git@github.com:ricohapi/theta-client.git")
-                developerConnection.set("scm:git:git@github.com:ricohapi/theta-client.git")
-                url.set("https://github.com/ricohapi/theta-client/tree/main")
-            }
-        }
-        /* Secrets
-         *     Set following environment variables for Central Portal user token
-         *       * ORG_GRADLE_PROJECT_mavenCentralUsername: username of the user token of Central Portal
-         *       * ORG_GRADLE_PROJECT_mavenCentralPassword: password of the user token of Central Portal
-         *     Set following environment variables for GPG key. See https://vanniktech.github.io/gradle-maven-publish-plugin/central/#secrets
-         *       * ORG_GRADLE_PROJECT_signingInMemoryKey : Secret key in PEM format
-         *       * ORG_GRADLE_PROJECT_signingInMemoryKeyId : 8 characters key id
-         *       * ORG_GRADLE_PROJECT_signingInMemoryKeyPassword
-         */
-    }
-}
-
 // Publish to GitHub Packages
-// Credentials are loaded from local.properties (github.username, github.token)
-// or environment variables (ORG_GRADLE_PROJECT_gitHubPackagesUsername, ORG_GRADLE_PROJECT_gitHubPackagesPassword)
+// Credentials are loaded from:
+// 1. local.properties (githubPackagesUsername, githubPackagesPassword) - for local development
+// 2. Environment variables (ORG_GRADLE_PROJECT_GitHubPackagesUsername, ORG_GRADLE_PROJECT_GitHubPackagesPassword) - for CI/CD
 publishing {
     repositories {
         maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/danielclipnow/theta-client")
-            credentials(PasswordCredentials::class)
+            credentials {
+                // Check extra properties (from local.properties), then project properties (from ORG_GRADLE_PROJECT_* env vars)
+                username = (extra.properties["GitHubPackagesUsername"] as String?)
+                    ?: project.findProperty("GitHubPackagesUsername") as String?
+                password = (extra.properties["GitHubPackagesPassword"] as String?)
+                    ?: project.findProperty("GitHubPackagesPassword") as String?
+            }
         }
     }
 }
